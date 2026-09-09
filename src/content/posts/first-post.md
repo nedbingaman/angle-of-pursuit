@@ -6,7 +6,7 @@ tags:
   - meta
 slug: ''
 editedNote: ''
-draft: false
+draft: true
 ---
 
 Every post is a markdown file in `src/content/posts/`. The frontmatter at the
