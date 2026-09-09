@@ -1,8 +1,7 @@
 # Angle of Pursuit
 
 A personal blog. Static site built with [Astro](https://astro.build), content
-in markdown, deployed to free static hosting. See `PROJECT_SPEC.md` for the
-decisions behind all of this.
+in markdown, deployed to Cloudflare Pages.
 
 ## Running it
 
@@ -64,12 +63,31 @@ Nothing renders until it is configured:
 
 These are public values that ship in the built HTML, not secrets.
 
+## Deploying
+
+Hosted on [Cloudflare Pages](https://pages.cloudflare.com), built from the
+`main` branch of the GitHub repo.
+
+| Setting | Value |
+| --- | --- |
+| Framework preset | Astro |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Node version | `22.12.0` (pinned in `.nvmrc`) |
+
+Every push to `main` triggers a production deploy; pushes to other branches
+get a preview URL. Set the four `PUBLIC_GISCUS_*` variables (see Comments) in
+the Pages project's build environment, matching `.env`.
+
+Security and cache headers are served from `public/_headers`.
+
 ## Before deploying
 
-- Set `SITE_URL` in `src/consts.ts` to the real domain, and update the
-  `Sitemap:` line in `public/robots.txt` to match. Canonical URLs, Open Graph
-  tags, the sitemap, and the RSS feed all derive from it.
-- Replace `public/favicon.svg` and `public/favicon.ico`.
+- `SITE_URL` in `src/consts.ts` and the `Sitemap:` line in `public/robots.txt`
+  must point at the real domain. Canonical URLs, Open Graph tags, the sitemap,
+  and the RSS feed all derive from `SITE_URL`. Both are set to
+  `https://angleofpursuit.com`.
+- Replace `public/favicon.svg` and `public/favicon.ico` with the real mark.
 
 ## Where things are
 

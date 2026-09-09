@@ -1,0 +1,23 @@
+# Cloudflare Pages serves these headers. This file is copied verbatim into the
+# build output. https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Fingerprinted build assets never change under a given name — cache hard.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Fonts are content-hashed by fontsource.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# A Content-Security-Policy is deliberately omitted here: Giscus injects an
+# inline <script> and an iframe to giscus.app, and Astro emits scoped <style>
+# blocks, so a wrong policy silently breaks comments or styling. Add one only
+# after verifying it in a browser against a page that has comments loaded, e.g.:
+#   Content-Security-Policy: default-src 'self'; script-src 'self' https://giscus.app; frame-src https://giscus.app; style-src 'self' 'unsafe-inline'; img-src 'self' https://giscus.app data:; connect-src 'self' https://giscus.app; base-uri 'none'
