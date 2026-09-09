@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------------------------
-   Design system — see PROJECT_SPEC.md §9.
-   Fonts are self-hosted (@fontsource) and imported in BaseLayout.astro.
+   Design system. Font faces are declared in fonts.css (latin subsets,
+   vendored into public/fonts/); both are imported by BaseLayout.astro.
    --------------------------------------------------------------------------- */
 
 :root {
@@ -158,6 +158,28 @@ h1, h2, h3, h4 {
   color: var(--accent);
 }
 
+.site-nav {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  font-size: 0.9375rem;
+}
+
+.site-nav a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: var(--accent);
+}
+
+.site-nav a[aria-current] {
+  color: var(--ink);
+  border-bottom: 1px solid var(--accent);
+}
+
 /* --- intro ---------------------------------------------------------------- */
 
 .intro {
@@ -270,11 +292,10 @@ h1, h2, h3, h4 {
   margin-bottom: 2.5rem;
 }
 
-.post-head time {
-  display: block;
+.post-meta {
+  margin: 0 0 0.6rem;
   color: var(--ink-muted);
   font-size: 0.875rem;
-  margin-bottom: 0.6rem;
 }
 
 .post h1,
@@ -590,4 +611,161 @@ code {
   width: 1px;
   height: 1px;
   overflow: hidden;
+}
+
+.comment-count {
+  align-self: flex-end;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+.comment-count.over {
+  color: #b3261e;
+}
+
+/* --- reading nav: prev/next + related ----------------------------------- */
+
+.post-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.post-nav a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1rem;
+}
+.post-nav a:hover {
+  color: var(--accent);
+}
+.post-nav a span {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.post-nav-newer {
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .post-nav {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .post-nav-newer {
+    text-align: left;
+  }
+}
+
+.related {
+  margin-top: 3rem;
+}
+.related h2 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  margin: 0 0 0.75rem;
+}
+.related ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.related li {
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.related li a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.related li a:hover {
+  color: var(--accent);
+}
+.related li time {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.more-link {
+  margin-top: 1.75rem;
+  font-size: 0.9375rem;
+}
+
+/* --- tags index & archive --------------------------------------------------- */
+
+.tag-index {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.tag-index li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--wash);
+  border-radius: 4px;
+}
+.tag-index a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.tag-index a:hover {
+  color: var(--accent);
+}
+.tag-count {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.archive-year {
+  margin: 2rem 0;
+}
+.archive-year h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem;
+}
+.archive-year ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.archive-year li {
+  display: flex;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--rule);
+}
+.archive-year li time {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  flex: 0 0 8.5rem;
+}
+.archive-year li a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.archive-year li a:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .archive-year li {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
 }

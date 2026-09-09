@@ -1,13 +1,15 @@
 /**
  * Angle of Pursuit — request handler in front of the static site.
  *
- * Everything that isn't handled here falls through to the static assets in
- * ./dist via the ASSETS binding, so the blog stays a plain static build.
+ * Anything not handled here falls through to the static build in ./dist via
+ * the ASSETS binding, so the blog stays a plain static site.
  *
- *   GET  /api/comments?post=<slug>   approved comments for a post, as JSON
- *   POST /api/comments               submit a comment (held for moderation)
+ *   GET  /api/comments?post=<slug>   visible comments for a post, as JSON
+ *   POST /api/comments               submit a comment
  *   GET  /moderate                   Basic-auth moderation page
  *   POST /moderate                   approve / delete (from that page)
+ *   GET  /posts/<draft>/             gated behind ?preview=<PREVIEW_TOKEN>
+ *   GET  /drafts.json                404 to the public (read internally)
  *
  * Comments live in the D1 database bound as DB (schema: migrations/).
  */
@@ -15,13 +17,21 @@
 export interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
-  /** Turnstile secret key (dashboard → Turnstile → widget). */
+  /** Turnstile secret key. */
   TURNSTILE_SECRET: string;
   /** Basic-auth credentials for /moderate. */
   MODERATION_USER: string;
   MODERATION_PASS: string;
   /** Salt so stored IP hashes can't be reversed to addresses. */
   IP_SALT: string;
+  /** "true" holds new comments for approval; anything else auto-publishes. */
+  COMMENTS_REQUIRE_APPROVAL?: string;
+  /** Shared secret that unlocks draft post URLs. Unset ⇒ drafts always 404. */
+  PREVIEW_TOKEN?: string;
+  /** Optional e-mail notification on new comments (needs the SEND_EMAIL binding). */
+  SEND_EMAIL?: { send(msg: unknown): Promise<void> };
+  NOTIFY_TO?: string;
+  NOTIFY_FROM?: string;
 }
 
 interface CommentRow {
@@ -41,14 +51,20 @@ const MAX_BODY = 4000;
 const RATE_WINDOW_MINUTES = 10;
 const RATE_MAX_IN_WINDOW = 5;
 
+let draftCache: { at: number; slugs: Set<string> } | null = null;
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '').toLowerCase() || '/';
 
+    if (path === '/drafts.json') {
+      return new Response('Not found', { status: 404 });
+    }
+
     if (path === '/api/comments') {
       if (request.method === 'GET') return getComments(url, env);
-      if (request.method === 'POST') return postComment(request, env);
+      if (request.method === 'POST') return postComment(request, env, ctx);
       return json({ error: 'method not allowed' }, 405, { Allow: 'GET, POST' });
     }
 
@@ -56,12 +72,34 @@ export default {
       return moderate(request, env);
     }
 
+    // Gate draft post pages (and their share images) behind the preview token.
+    const draftMatch =
+      path.match(/^\/posts\/([a-z0-9-]+)$/) || path.match(/^\/og\/([a-z0-9-]+)\.png$/);
+    if (draftMatch) {
+      const slug = draftMatch[1];
+      const drafts = await getDraftSlugs(env, url);
+      if (drafts.has(slug) && !hasPreviewAccess(request, url, env)) {
+        return notFound(env, url);
+      }
+      if (drafts.has(slug) && url.searchParams.get('preview')) {
+        // Valid token in the query — drop a short-lived cookie so in-page
+        // links keep working without the query string.
+        const res = await env.ASSETS.fetch(request);
+        const copy = new Response(res.body, res);
+        copy.headers.append(
+          'Set-Cookie',
+          `preview=${env.PREVIEW_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600`,
+        );
+        return copy;
+      }
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
 
 /* -------------------------------------------------------------------------- */
-/*  Public API                                                               */
+/*  Comments API                                                             */
 /* -------------------------------------------------------------------------- */
 
 async function getComments(url: URL, env: Env): Promise<Response> {
@@ -80,7 +118,7 @@ async function getComments(url: URL, env: Env): Promise<Response> {
   return json({ comments: results }, 200, { 'Cache-Control': 'no-store' });
 }
 
-async function postComment(request: Request, env: Env): Promise<Response> {
+async function postComment(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   let data: Record<string, unknown>;
   try {
     data = (await request.json()) as Record<string, unknown>;
@@ -95,7 +133,7 @@ async function postComment(request: Request, env: Env): Promise<Response> {
   const token = String(data.turnstileToken ?? '');
 
   // A filled honeypot is a bot. Pretend it worked; store nothing.
-  if (honeypot) return json({ ok: true, pending: true }, 202);
+  if (honeypot) return json({ ok: true, approved: false }, 202);
 
   if (!SLUG_RE.test(post)) return json({ error: 'invalid post' }, 400);
   if (author.length < 1 || author.length > MAX_AUTHOR) {
@@ -121,15 +159,18 @@ async function postComment(request: Request, env: Env): Promise<Response> {
     return json({ error: 'You’re posting too fast. Try again in a few minutes.' }, 429);
   }
 
+  const approved = env.COMMENTS_REQUIRE_APPROVAL === 'true' ? 0 : 1;
   const ua = (request.headers.get('User-Agent') ?? '').slice(0, 300);
   await env.DB.prepare(
-    `INSERT INTO comments (post_slug, author, body, ip_hash, user_agent)
-     VALUES (?1, ?2, ?3, ?4, ?5)`,
+    `INSERT INTO comments (post_slug, author, body, approved, ip_hash, user_agent)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
   )
-    .bind(post, author, body, ipHash, ua)
+    .bind(post, author, body, approved, ipHash, ua)
     .run();
 
-  return json({ ok: true, pending: true }, 201);
+  ctx.waitUntil(notify(env, { post, author, body, approved: approved === 1 }));
+
+  return json({ ok: true, approved: approved === 1 }, approved === 1 ? 201 : 202);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -166,13 +207,14 @@ async function moderate(request: Request, env: Env): Promise<Response> {
       `SELECT * FROM comments WHERE approved = 0 ORDER BY created_at DESC, id DESC`,
     ).all<CommentRow>()
   ).results;
-  const approved = (
+  const recent = (
     await env.DB.prepare(
       `SELECT * FROM comments WHERE approved = 1 ORDER BY created_at DESC, id DESC LIMIT 100`,
     ).all<CommentRow>()
   ).results;
 
-  return new Response(moderationPage(pending, approved), {
+  const mode = env.COMMENTS_REQUIRE_APPROVAL === 'true' ? 'review' : 'auto-publish';
+  return new Response(moderationPage(pending, recent, mode), {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'X-Robots-Tag': 'noindex',
@@ -187,7 +229,7 @@ function checkBasicAuth(request: Request, env: Env): boolean {
   return timingSafeEqual(header, expected);
 }
 
-function moderationPage(pending: CommentRow[], approved: CommentRow[]): string {
+function moderationPage(pending: CommentRow[], recent: CommentRow[], mode: string): string {
   const row = (c: CommentRow, actions: string) => `
     <li>
       <div class="meta"><strong>${esc(c.author)}</strong> · ${esc(c.post_slug)} · ${esc(c.created_at)} UTC · #${c.id}</div>
@@ -209,6 +251,7 @@ function moderationPage(pending: CommentRow[], approved: CommentRow[]): string {
 <style>
   body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; background: #fafafa; }
   h1 { font-size: 1.2rem; } h2 { font-size: 1rem; margin-top: 2.5rem; border-bottom: 1px solid #ddd; padding-bottom: .3rem; }
+  .mode { color: #666; font-size: .85rem; }
   ul { list-style: none; padding: 0; } li { border: 1px solid #e0e0e0; border-radius: 6px; padding: .8rem 1rem; margin: .6rem 0; background: #fff; }
   .meta { color: #666; font-size: .8rem; } .body { white-space: pre-wrap; margin: .5rem 0; }
   form { display: inline; } button { font: inherit; padding: .3rem .8rem; margin-right: .4rem; cursor: pointer; border: 1px solid #bbb; border-radius: 4px; background: #f0f0f0; }
@@ -216,11 +259,82 @@ function moderationPage(pending: CommentRow[], approved: CommentRow[]): string {
   @media (prefers-color-scheme: dark) { body { background:#151515; color:#e0e0e0 } li{background:#1e1e1e;border-color:#333} button{background:#2a2a2a;border-color:#444;color:#e0e0e0} h2{border-color:#333} }
 </style></head><body>
 <h1>Moderate comments</h1>
+<p class="mode">Mode: <strong>${mode}</strong>${
+    mode === 'auto-publish'
+      ? ' — comments appear immediately; delete anything unwanted below.'
+      : ' — comments wait here until approved.'
+  }</p>
 <h2>Pending (${pending.length})</h2>
 ${pending.length ? `<ul>${pending.map((c) => row(c, approveBtn + deleteBtn)).join('')}</ul>` : `<p class="empty">Nothing waiting.</p>`}
-<h2>Approved — most recent ${approved.length}</h2>
-${approved.length ? `<ul>${approved.map((c) => row(c, deleteBtn)).join('')}</ul>` : `<p class="empty">None yet.</p>`}
+<h2>Published — most recent ${recent.length}</h2>
+${recent.length ? `<ul>${recent.map((c) => row(c, deleteBtn)).join('')}</ul>` : `<p class="empty">None yet.</p>`}
 </body></html>`;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Draft preview gating                                                     */
+/* -------------------------------------------------------------------------- */
+
+async function getDraftSlugs(env: Env, url: URL): Promise<Set<string>> {
+  if (draftCache && Date.now() - draftCache.at < 60_000) return draftCache.slugs;
+  try {
+    const res = await env.ASSETS.fetch(new Request(new URL('/drafts.json', url.origin)));
+    if (!res.ok) return new Set();
+    const data = (await res.json()) as { drafts?: string[] };
+    const slugs = new Set(data.drafts ?? []);
+    draftCache = { at: Date.now(), slugs };
+    return slugs;
+  } catch {
+    return new Set();
+  }
+}
+
+/** The site's 404 page, but with a real 404 status. */
+async function notFound(env: Env, url: URL): Promise<Response> {
+  const page = await env.ASSETS.fetch(new Request(new URL('/404.html', url.origin)));
+  return new Response(page.body, {
+    status: 404,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
+function hasPreviewAccess(request: Request, url: URL, env: Env): boolean {
+  const token = env.PREVIEW_TOKEN;
+  if (!token) return false;
+  if (url.searchParams.get('preview') === token) return true;
+  const cookie = request.headers.get('Cookie') ?? '';
+  return cookie.split(/;\s*/).some((c) => c === `preview=${token}`);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Notifications                                                            */
+/* -------------------------------------------------------------------------- */
+
+async function notify(
+  env: Env,
+  c: { post: string; author: string; body: string; approved: boolean },
+): Promise<void> {
+  if (!env.SEND_EMAIL || !env.NOTIFY_TO || !env.NOTIFY_FROM) return;
+  const subject = `New comment on ${c.post}`.replace(/[^\x20-\x7E]/g, '');
+  const text =
+    `${c.author} commented on "${c.post}"` +
+    `${c.approved ? '' : ' (held for review)'}:\n\n${c.body}\n\n` +
+    `Moderate: https://angleofpursuit.com/moderate`;
+  const raw = [
+    `From: ${env.NOTIFY_FROM}`,
+    `To: ${env.NOTIFY_TO}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="utf-8"',
+    '',
+    text,
+  ].join('\r\n');
+  try {
+    const { EmailMessage } = await import('cloudflare:email');
+    await env.SEND_EMAIL.send(new EmailMessage(env.NOTIFY_FROM, env.NOTIFY_TO, raw));
+  } catch {
+    /* best effort — binding missing, address unverified, etc. */
+  }
 }
 
 /* -------------------------------------------------------------------------- */

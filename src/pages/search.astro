@@ -1,0 +1,33 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Search from 'astro-pagefind/components/Search.astro';
+import { SITE_TITLE } from '../consts';
+---
+
+<BaseLayout title={`Search — ${SITE_TITLE}`} noindex>
+  <article class="page">
+    <h1>Search</h1>
+    <Search className="pf-search" />
+    <noscript>
+      <p>
+        Search needs JavaScript. Try the <a href="/archive/">archive</a> or
+        <a href="/tags/">tags</a>.
+      </p>
+    </noscript>
+  </article>
+</BaseLayout>
+
+<style is:global>
+  /* Nudge the Pagefind searchbox toward the site palette. */
+  .pf-search {
+    --pagefind-ui-scale: 0.95;
+    --pagefind-ui-primary: var(--accent);
+    --pagefind-ui-text: var(--ink);
+    --pagefind-ui-background: var(--bg);
+    --pagefind-ui-border: var(--rule);
+    --pagefind-ui-font: var(--font-body);
+    --pagefind-ui-border-radius: 6px;
+    display: block;
+    margin-top: 1rem;
+  }
+</style>

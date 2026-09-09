@@ -2,29 +2,45 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Intro from '../components/Intro.astro';
 import { getPosts, pathOf, formatDate, machineDate } from '../lib/posts';
-import { SITE_TITLE } from '../consts';
+import { SITE_TITLE, SITE_URL, SITE_AUTHOR } from '../consts';
 
-const posts = await getPosts();
+const RECENT = 10;
+const all = await getPosts();
+const posts = all.slice(0, RECENT);
+const more = all.length - posts.length;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_TITLE,
+  url: SITE_URL,
+  publisher: { '@type': 'Organization', name: SITE_AUTHOR },
+};
 ---
 
-<BaseLayout title={SITE_TITLE} isHome>
+<BaseLayout title={SITE_TITLE} isHome jsonLd={jsonLd}>
   <Intro />
 
-  {posts.length === 0 ? (
+  {all.length === 0 ? (
     <p class="empty-state">
       No posts yet. The first one goes in <code>src/content/posts/</code> as a
-      markdown file.
+      markdown file, or use the editor at <a href="/admin/">/admin</a>.
     </p>
   ) : (
-    <ul class="post-list">
-      {posts.map((post) => (
-        <li class="post-entry">
-          {post.data.draft && <span class="draft-flag">Draft — hidden in production</span>}
-          <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
-          <h2><a href={pathOf(post)}>{post.data.title}</a></h2>
-          {post.data.excerpt && <p>{post.data.excerpt}</p>}
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul class="post-list">
+        {posts.map((post) => (
+          <li class="post-entry">
+            {post.data.draft && <span class="draft-flag">Draft — hidden in production</span>}
+            <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+            <h2><a href={pathOf(post)}>{post.data.title}</a></h2>
+            {post.data.excerpt && <p>{post.data.excerpt}</p>}
+          </li>
+        ))}
+      </ul>
+      {more > 0 && (
+        <p class="more-link"><a href="/archive/">All {all.length} posts →</a></p>
+      )}
+    </>
   )}
 </BaseLayout>

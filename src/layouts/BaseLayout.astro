@@ -1,7 +1,5 @@
 ---
-import '@fontsource-variable/fraunces/wonk.css';
-import '@fontsource-variable/public-sans';
-import '@fontsource-variable/public-sans/wght-italic.css';
+import '../styles/fonts.css';
 import '../styles/global.css';
 
 import { SITE_TITLE, SITE_LANG } from '../consts';
@@ -15,6 +13,12 @@ interface Props {
   /** Post pages pass 'article' so link previews are typed correctly. */
   ogType?: 'website' | 'article';
   publishedTime?: Date;
+  /** Path to the share image for this page. Defaults to the site card. */
+  ogImage?: string;
+  /** Keep the page out of search results (drafts, the search page itself). */
+  noindex?: boolean;
+  /** JSON-LD object, serialised into a <script type="application/ld+json">. */
+  jsonLd?: Record<string, unknown>;
 }
 
 const {
@@ -23,9 +27,23 @@ const {
   isHome = false,
   ogType = 'website',
   publishedTime,
+  ogImage = '/og/site.png',
+  noindex = false,
+  jsonLd,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImageUrl = new URL(ogImage, Astro.site).href;
+const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
+
+const nav = [
+  { href: '/', label: 'Home' },
+  { href: '/archive/', label: 'Archive' },
+  { href: '/tags/', label: 'Tags' },
+  { href: '/search/', label: 'Search' },
+  { href: '/about/', label: 'About' },
+];
+const here = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -36,39 +54,92 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     {description && <meta name="description" content={description} />}
     <meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16181a" media="(prefers-color-scheme: dark)" />
     <title>{title}</title>
+
+    <link
+      rel="preload"
+      href="/fonts/public-sans-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/fraunces-latin-wonk.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
 
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={SITE_TITLE} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     {publishedTime && (
       <meta property="article:published_time" content={publishedTime.toISOString()} />
     )}
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    {jsonLd && (
+      <script
+        type="application/ld+json"
+        set:html={JSON.stringify(jsonLd)}
+        is:inline
+      />
+    )}
+
+    {beaconToken && (
+      <script
+        is:inline
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={JSON.stringify({ token: beaconToken })}
+      />
+    )}
   </head>
   <body>
     <a href="#content" class="skip-link">Skip to content</a>
 
     <div class="wrap">
-      <header class="site-header">
+      <header class="site-header" data-pagefind-ignore>
         {isHome ? (
           <h1 class="wordmark"><a href="/">{SITE_TITLE}</a></h1>
         ) : (
           <p class="wordmark"><a href="/">{SITE_TITLE}</a></p>
         )}
+        <nav class="site-nav" aria-label="Primary">
+          {nav.map((item) => (
+            <a
+              href={item.href}
+              aria-current={
+                item.href === '/' ? here === '/' || undefined : here.startsWith(item.href) || undefined
+              }
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
       </header>
 
       <main id="content">
         <slot />
       </main>
 
-      <footer class="site-footer">
+      <footer class="site-footer" data-pagefind-ignore>
         <a href="/">Home</a>
+        <a href="/archive/">Archive</a>
+        <a href="/tags/">Tags</a>
         <a href="/about/">About</a>
       </footer>
     </div>

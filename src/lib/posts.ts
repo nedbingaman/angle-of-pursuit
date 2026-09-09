@@ -25,6 +25,25 @@ export async function getPosts(): Promise<Post[]> {
   return posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 }
 
+/** Every post including drafts, newest first — for routes that build drafts. */
+export async function getAllPosts(): Promise<Post[]> {
+  const posts = await getCollection('posts');
+  return posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+}
+
+/** Other posts sharing the most tags with `post`, best first. */
+export function relatedPosts(post: Post, pool: Post[], limit = 4): Post[] {
+  const tags = new Set(post.data.tags);
+  if (tags.size === 0) return [];
+  return pool
+    .filter((p) => slugOf(p) !== slugOf(post))
+    .map((p) => ({ p, shared: p.data.tags.filter((t) => tags.has(t)).length }))
+    .filter((x) => x.shared > 0)
+    .sort((a, b) => b.shared - a.shared || b.p.data.date.valueOf() - a.p.data.date.valueOf())
+    .slice(0, limit)
+    .map((x) => x.p);
+}
+
 /**
  * Dates in frontmatter are bare calendar days (2026-09-08) and parse as UTC
  * midnight. Formatting must be pinned to UTC or the rendered date shifts by a

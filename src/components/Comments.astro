@@ -1,27 +1,33 @@
 ---
-// Native comments. The list and form are rendered here; the browser fetches
-// approved comments from /api/comments (served by worker/index.ts, backed by
-// D1) and posts new ones there. New comments are held until approved at
-// /moderate.
+// Native comments. The list and form render here; the browser fetches
+// published comments from /api/comments (worker/index.ts, backed by D1) and
+// posts new ones there. Comments publish immediately unless the Worker's
+// COMMENTS_REQUIRE_APPROVAL is "true"; either way /moderate can delete them.
 //
-// PUBLIC_TURNSTILE_SITEKEY enables the Cloudflare Turnstile check on the form.
-// Without it the section still renders and reads, but the form is hidden
-// (posting would fail Turnstile verification server-side).
+// PUBLIC_TURNSTILE_SITEKEY enables the Turnstile check. Without it the
+// section still reads comments but the form is hidden (a post would fail
+// verification server-side anyway).
 interface Props {
   /** Post slug — the key comments are stored under. */
   id: string;
   title: string;
 }
 
-const { id } = Astro.props;
+const { id, title } = Astro.props;
 const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
+const MAX_BODY = 4000;
 ---
 
-<section class="comments" data-post={id}>
+<section
+  class="comments"
+  data-post={id}
+  data-pagefind-ignore
+  aria-label={`Comments on ${title}`}
+>
   <h2>Comments</h2>
 
   <ol class="comment-list" aria-live="polite"></ol>
-  <p class="comment-msg" data-role="list-msg">Loading comments…</p>
+  <p class="comment-msg" data-role="list-msg" hidden></p>
 
   {turnstileSitekey && (
     <form class="comment-form" novalidate>
@@ -34,7 +40,8 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
 
       <label>
         <span>Comment</span>
-        <textarea name="body" maxlength="4000" rows="5" required></textarea>
+        <textarea name="body" maxlength={MAX_BODY} rows="5" required></textarea>
+        <span class="comment-count" data-role="count" aria-hidden="true">0 / {MAX_BODY}</span>
       </label>
 
       <div class="comment-hp" aria-hidden="true">
@@ -49,7 +56,7 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
       ></div>
 
       <button type="submit">Post comment</button>
-      <p class="comment-note">Held for review before it appears. No account needed; your name shows, nothing else.</p>
+      <p class="comment-note">No account needed — your name shows, nothing else.</p>
     </form>
   )}
 </section>
@@ -60,6 +67,7 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
 
 <script>
   (() => {
+    const MAX_BODY = 4000;
     const section = document.querySelector<HTMLElement>('.comments[data-post]');
     if (!section) return;
     const post = section.dataset.post!;
@@ -70,7 +78,9 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
     const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
     const parseUTC = (s: string) => new Date(s.replace(' ', 'T') + 'Z');
 
-    function render(comments: Array<{ id: number; author: string; body: string; created_at: string }>) {
+    type Comment = { id: number; author: string; body: string; created_at: string };
+
+    function render(comments: Comment[]) {
       list.replaceChildren();
       for (const c of comments) {
         const li = document.createElement('li');
@@ -96,57 +106,83 @@ const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
       }
     }
 
+    function setListMsg(text: string) {
+      listMsg.textContent = text;
+      listMsg.hidden = !text;
+    }
+
     async function load() {
       try {
         const res = await fetch(`/api/comments?post=${encodeURIComponent(post)}`, {
           headers: { Accept: 'application/json' },
         });
         if (!res.ok) throw new Error(String(res.status));
-        const { comments } = (await res.json()) as { comments: any[] };
+        const { comments } = (await res.json()) as { comments: Comment[] };
         render(comments);
-        listMsg.textContent = comments.length ? '' : 'No comments yet.';
-        listMsg.hidden = comments.length > 0;
+        setListMsg(comments.length ? '' : 'No comments yet. Be the first.');
       } catch {
-        listMsg.textContent = 'Couldn’t load comments.';
-        listMsg.hidden = false;
+        setListMsg('Couldn’t load comments.');
       }
     }
 
     if (form) {
+      const authorEl = form.querySelector<HTMLInputElement>('[name="author"]')!;
+      const bodyEl = form.querySelector<HTMLTextAreaElement>('[name="body"]')!;
+      const countEl = form.querySelector<HTMLElement>('[data-role="count"]')!;
+      const msg = form.querySelector<HTMLElement>('[data-role="form-msg"]')!;
+      const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+
+      const updateCount = () => {
+        countEl.textContent = `${bodyEl.value.length} / ${MAX_BODY}`;
+        countEl.classList.toggle('over', bodyEl.value.length > MAX_BODY);
+      };
+      bodyEl.addEventListener('input', updateCount);
+      updateCount();
+
+      const showMsg = (text: string, isError = false) => {
+        msg.hidden = false;
+        msg.className = isError ? 'comment-msg comment-msg-error' : 'comment-msg';
+        msg.textContent = text;
+      };
+
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const msg = form.querySelector<HTMLElement>('[data-role="form-msg"]')!;
-        const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
-        const fd = new FormData(form);
+        const author = authorEl.value.trim();
+        const body = bodyEl.value.trim();
+        if (!author) return showMsg('Add your name.', true);
+        if (!body) return showMsg('Write a comment first.', true);
+        if (body.length > MAX_BODY) return showMsg('Comment is too long.', true);
 
         const turnstile = (window as any).turnstile;
         const token = turnstile?.getResponse?.() ?? '';
 
-        msg.hidden = false;
-        msg.className = 'comment-msg';
-        msg.textContent = 'Posting…';
+        showMsg('Posting…');
         button.disabled = true;
-
         try {
           const res = await fetch('/api/comments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               post,
-              author: fd.get('author'),
-              body: fd.get('body'),
-              website: fd.get('website'),
+              author,
+              body,
+              website: (form.querySelector<HTMLInputElement>('[name="website"]')!).value,
               turnstileToken: token,
             }),
           });
-          const out = (await res.json().catch(() => ({}))) as { error?: string };
+          const out = (await res.json().catch(() => ({}))) as { error?: string; approved?: boolean };
           if (!res.ok) throw new Error(out.error || 'Something went wrong.');
           form.reset();
+          updateCount();
           turnstile?.reset?.();
-          msg.textContent = 'Thanks — your comment is in the queue and will appear once approved.';
+          if (out.approved) {
+            await load();
+            showMsg('Posted.');
+          } else {
+            showMsg('Thanks — your comment is in the queue and will appear once approved.');
+          }
         } catch (err) {
-          msg.className = 'comment-msg comment-msg-error';
-          msg.textContent = err instanceof Error ? err.message : 'Something went wrong.';
+          showMsg(err instanceof Error ? err.message : 'Something went wrong.', true);
         } finally {
           button.disabled = false;
         }

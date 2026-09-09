@@ -2,20 +2,61 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Comments from '../../components/Comments.astro';
 import TagList from '../../components/TagList.astro';
-import { getPosts, slugOf, formatDate, machineDate } from '../../lib/posts';
-import { SITE_TITLE } from '../../consts';
+import {
+  getPosts,
+  getAllPosts,
+  relatedPosts,
+  slugOf,
+  pathOf,
+  formatDate,
+  machineDate,
+  type Post,
+} from '../../lib/posts';
+import { SITE_TITLE, SITE_URL, SITE_AUTHOR } from '../../consts';
 import { render } from 'astro:content';
 
 export async function getStaticPaths() {
-  const posts = await getPosts();
-  return posts.map((post) => ({
-    params: { slug: slugOf(post) },
-    props: { post },
-  }));
+  const all = await getAllPosts(); // drafts too, so previews have a page
+  const visible = await getPosts(); // published only, for nav order + related
+
+  return all.map((post) => {
+    const i = visible.findIndex((p) => slugOf(p) === slugOf(post));
+    return {
+      params: { slug: slugOf(post) },
+      props: {
+        post,
+        newer: i > 0 ? visible[i - 1] : null,
+        older: i >= 0 && i < visible.length - 1 ? visible[i + 1] : null,
+        related: relatedPosts(post, visible),
+      },
+    };
+  });
 }
 
-const { post } = Astro.props;
-const { Content } = await render(post);
+interface Props {
+  post: Post;
+  newer: Post | null;
+  older: Post | null;
+  related: Post[];
+}
+
+const { post, newer, older, related } = Astro.props;
+const { Content, remarkPluginFrontmatter } = await render(post);
+const minutesRead: number | undefined = remarkPluginFrontmatter?.minutesRead;
+
+const url = new URL(pathOf(post), SITE_URL).href;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  datePublished: machineDate(post.data.date),
+  ...(post.data.excerpt ? { description: post.data.excerpt } : {}),
+  author: { '@type': 'Organization', name: SITE_AUTHOR },
+  publisher: { '@type': 'Organization', name: SITE_TITLE },
+  mainEntityOfPage: url,
+  url,
+  image: new URL(`/og/${slugOf(post)}.png`, SITE_URL).href,
+};
 ---
 
 <BaseLayout
@@ -23,11 +64,17 @@ const { Content } = await render(post);
   description={post.data.excerpt}
   ogType="article"
   publishedTime={post.data.date}
+  ogImage={`/og/${slugOf(post)}.png`}
+  noindex={post.data.draft}
+  jsonLd={jsonLd}
 >
-  <article class="post">
+  <article class="post" data-pagefind-body>
     <header class="post-head">
-      {post.data.draft && <p class="draft-flag">Draft — hidden in production</p>}
-      <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+      {post.data.draft && <p class="draft-flag">Draft — not published</p>}
+      <p class="post-meta">
+        <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+        {minutesRead && <> · {minutesRead} min read</>}
+      </p>
       <h1>{post.data.title}</h1>
     </header>
 
@@ -42,6 +89,37 @@ const { Content } = await render(post);
       )}
     </footer>
   </article>
+
+  {(newer || older) && (
+    <nav class="post-nav" aria-label="More posts">
+      {older ? (
+        <a class="post-nav-older" href={pathOf(older)}>
+          <span>← Older</span>
+          {older.data.title}
+        </a>
+      ) : <span />}
+      {newer ? (
+        <a class="post-nav-newer" href={pathOf(newer)}>
+          <span>Newer →</span>
+          {newer.data.title}
+        </a>
+      ) : <span />}
+    </nav>
+  )}
+
+  {related.length > 0 && (
+    <aside class="related" aria-label="Related posts">
+      <h2>Related</h2>
+      <ul>
+        {related.map((p) => (
+          <li>
+            <a href={pathOf(p)}>{p.data.title}</a>
+            <time datetime={machineDate(p.data.date)}>{formatDate(p.data.date)}</time>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )}
 
   <Comments id={slugOf(post)} title={post.data.title} />
 </BaseLayout>

@@ -3,23 +3,18 @@
   "name": "angle-of-pursuit",
   "compatibility_date": "2026-09-09",
 
-  // The Worker runs only for requests that don't match a file in ./dist
-  // (i.e. /api/comments and /moderate); everything else is served straight
-  // from the static build via the ASSETS binding.
+  // The Worker runs before the static-asset / edge-cache lookup for every
+  // request (run_worker_first) so dynamic routes can't be shadowed by a
+  // cached response; it hands everything else to env.ASSETS.
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    // Run the Worker before any static-asset or edge-cache lookup, so the
-    // dynamic routes (/api/comments, /moderate) can never be shadowed by a
-    // cached response. The Worker hands everything else to env.ASSETS.
     "run_worker_first": true
   },
 
-  // Comment storage. Create with:
-  //   npx wrangler d1 create angle-of-pursuit-comments
-  // then paste the printed database_id below and apply migrations/0001_init.sql.
+  // Comment storage.
   "d1_databases": [
     {
       "binding": "DB",
@@ -27,6 +22,11 @@
       "database_id": "dd32f3d8-b381-4212-8627-3a11a6fa3e81"
     }
   ],
+
+  // E-mail on new comments. Enable Email Routing on the zone and verify a
+  // destination address first, then uncomment this line and redeploy, and set
+  // the NOTIFY_TO / NOTIFY_FROM Worker vars. notify() no-ops until then.
+  // "send_email": [{ "name": "SEND_EMAIL" }],
 
   "observability": { "enabled": true }
 }

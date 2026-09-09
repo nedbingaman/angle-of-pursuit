@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPosts, pathOf, formatDate, machineDate } from '../lib/posts';
+import { SITE_TITLE } from '../consts';
+
+const posts = await getPosts();
+
+// Group by year, newest year first (posts are already newest-first).
+const byYear = new Map<number, typeof posts>();
+for (const post of posts) {
+  const y = post.data.date.getUTCFullYear();
+  const list = byYear.get(y) ?? [];
+  list.push(post);
+  byYear.set(y, list);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+---
+
+<BaseLayout title={`Archive — ${SITE_TITLE}`}>
+  <article class="page">
+    <h1>Archive</h1>
+    {posts.length === 0 ? (
+      <p>No posts yet.</p>
+    ) : (
+      years.map((year) => (
+        <section class="archive-year">
+          <h2>{year}</h2>
+          <ul>
+            {byYear.get(year)!.map((post) => (
+              <li>
+                <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+                <a href={pathOf(post)}>{post.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    )}
+  </article>
+</BaseLayout>
