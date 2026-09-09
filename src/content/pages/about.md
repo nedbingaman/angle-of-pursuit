@@ -2,7 +2,7 @@
 title: About
 slug: about
 nav: true
-navOrder: 60
+navOrder: 10
 draft: false
 ---
 

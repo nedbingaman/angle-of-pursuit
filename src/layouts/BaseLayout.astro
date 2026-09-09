@@ -49,9 +49,9 @@ const pageNav = (await getCollection('pages'))
 
 const nav = [
   { href: '/', label: 'Home', order: 0 },
-  { href: '/archive/', label: 'Archive', order: 20 },
+  { href: '/search/', label: 'Search', order: 20 },
   { href: '/tags/', label: 'Tags', order: 30 },
-  { href: '/search/', label: 'Search', order: 40 },
+  { href: '/archive/', label: 'Archive', order: 40 },
   ...pageNav,
 ].sort((a, b) => a.order - b.order);
 const here = Astro.url.pathname;

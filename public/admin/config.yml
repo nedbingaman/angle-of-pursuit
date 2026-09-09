@@ -120,7 +120,7 @@ collections:
           required: false,
           value_type: int,
           default: 50,
-          hint: 'Lower numbers sit further left. Archive is 20, Tags 30, Search 40.',
+          hint: 'Lower numbers sit further left. Search is 20, Tags 30, Archive 40.',
         }
       - { name: draft, label: 'Draft — kept off the live site', widget: boolean, default: false }
       - { name: body, label: Body, widget: markdown }
