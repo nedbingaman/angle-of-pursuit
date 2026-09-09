@@ -4,10 +4,11 @@ import '@fontsource-variable/public-sans';
 import '@fontsource-variable/public-sans/wght-italic.css';
 import '../styles/global.css';
 
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_LANG } from '../consts';
+import { SITE_TITLE, SITE_LANG } from '../consts';
 
 interface Props {
   title: string;
+  /** Optional. When unset, no description/og:description meta is emitted. */
   description?: string;
   /** Renders the wordmark as the page <h1>. True on the homepage only. */
   isHome?: boolean;
@@ -18,7 +19,7 @@ interface Props {
 
 const {
   title,
-  description = SITE_DESCRIPTION,
+  description,
   isHome = false,
   ogType = 'website',
   publishedTime,
@@ -35,14 +36,14 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="canonical" href={canonical} />
-    <meta name="description" content={description} />
+    {description && <meta name="description" content={description} />}
     <meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#16181a" media="(prefers-color-scheme: dark)" />
     <title>{title}</title>
 
     <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    {description && <meta property="og:description" content={description} />}
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={SITE_TITLE} />
     {publishedTime && (
