@@ -1,7 +1,7 @@
 # Angle of Pursuit
 
 A personal blog. Static site built with [Astro](https://astro.build), content
-in markdown, deployed to Cloudflare Pages.
+in markdown, deployed to Cloudflare Workers (static assets).
 
 ## Running it
 
@@ -65,21 +65,25 @@ These are public values that ship in the built HTML, not secrets.
 
 ## Deploying
 
-Hosted on [Cloudflare Pages](https://pages.cloudflare.com), built from the
-`main` branch of the GitHub repo.
+Hosted on [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/)
+as an assets-only Worker (no server code), built from the `main` branch of the
+GitHub repo. Config is in `wrangler.jsonc`.
 
 | Setting | Value |
 | --- | --- |
-| Framework preset | Astro |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
+| Deploy command | `npx wrangler deploy` |
+| Assets directory | `./dist` (set in `wrangler.jsonc`) |
 | Node version | `22.12.0` (pinned in `.nvmrc`) |
 
 Every push to `main` triggers a production deploy; pushes to other branches
 get a preview URL. Set the four `PUBLIC_GISCUS_*` variables (see Comments) in
-the Pages project's build environment, matching `.env`.
+the Worker's build-environment settings, matching `.env`.
 
-Security and cache headers are served from `public/_headers`.
+`npx wrangler deploy` also works from a local checkout once `npm run build`
+has produced `dist/`. Security and cache headers are served from
+`public/_headers`; unmatched routes render `dist/404.html`
+(`not_found_handling` in `wrangler.jsonc`).
 
 ## Before deploying
 

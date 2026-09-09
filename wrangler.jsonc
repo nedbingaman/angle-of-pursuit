@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "angle-of-pursuit",
+  "compatibility_date": "2026-09-09",
+  // Assets-only Worker: no `main` script, every request is served from the
+  // static build in ./dist. `npm run build` must run first (Cloudflare's
+  // build step does this via the dashboard build command).
+  "assets": {
+    "directory": "./dist",
+    // Unmatched paths render dist/404.html with a 404 status, instead of the
+    // default bare "not found".
+    "not_found_handling": "404-page"
+  }
+}
