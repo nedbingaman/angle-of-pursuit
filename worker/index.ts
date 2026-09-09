@@ -140,7 +140,10 @@ async function moderate(request: Request, env: Env): Promise<Response> {
   if (!checkBasicAuth(request, env)) {
     return new Response('Authentication required.', {
       status: 401,
-      headers: { 'WWW-Authenticate': 'Basic realm="moderate", charset="UTF-8"' },
+      headers: {
+        'WWW-Authenticate': 'Basic realm="moderate", charset="UTF-8"',
+        'Cache-Control': 'no-store',
+      },
     });
   }
 
