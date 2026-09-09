@@ -51,7 +51,7 @@ export default {
       return json({ error: 'method not allowed' }, 405, { Allow: 'GET, POST' });
     }
 
-    if (url.pathname === '/moderate') {
+    if (url.pathname === '/moderate' || url.pathname === '/moderate/') {
       return moderate(request, env);
     }
 
