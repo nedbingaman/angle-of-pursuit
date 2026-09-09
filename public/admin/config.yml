@@ -15,9 +15,9 @@ backend:
   repo: nedbingaman/angle-of-pursuit
   branch: main
   commit_messages:
-    create: 'Add post "{{slug}}"'
-    update: 'Update post "{{slug}}"'
-    delete: 'Delete post "{{slug}}"'
+    create: 'Add {{collection}} "{{slug}}"'
+    update: 'Update {{collection}} "{{slug}}"'
+    delete: 'Delete {{collection}} "{{slug}}"'
     uploadMedia: 'Upload {{path}}'
     deleteMedia: 'Delete {{path}}'
 
@@ -81,3 +81,74 @@ collections:
         }
       - { name: draft, label: 'Draft — kept off the live site', widget: boolean, default: false }
       - { name: body, label: Body, widget: markdown }
+
+  - name: pages
+    label: Pages
+    label_singular: Page
+    folder: src/content/pages
+    create: true
+    extension: md
+    format: frontmatter
+    slug: '{{fields.slug | default: title}}'
+    summary: '{{title}}'
+    fields:
+      - { name: title, label: Title, widget: string }
+      - {
+          name: slug,
+          label: URL slug,
+          widget: string,
+          required: false,
+          hint: 'Leave blank to use the title. "about" serves at /about/.',
+        }
+      - {
+          name: nav,
+          label: Show a link in the top navigation,
+          widget: boolean,
+          default: false,
+        }
+      - {
+          name: navLabel,
+          label: Nav label,
+          widget: string,
+          required: false,
+          hint: 'Defaults to the title.',
+        }
+      - {
+          name: navOrder,
+          label: Nav order,
+          widget: number,
+          required: false,
+          value_type: int,
+          default: 50,
+          hint: 'Lower numbers sit further left. Archive is 20, Tags 30, Search 40.',
+        }
+      - { name: draft, label: 'Draft — kept off the live site', widget: boolean, default: false }
+      - { name: body, label: Body, widget: markdown }
+
+  - name: site
+    label: Site text
+    files:
+      - name: settings
+        label: Site text
+        file: src/content/site/settings.json
+        description: The tagline under the title and the blurb on the homepage.
+        fields:
+          - {
+              name: tagline,
+              label: Tagline,
+              widget: string,
+              required: false,
+              hint: 'Shown under the site title on every page. Blank hides it.',
+            }
+          - {
+              name: introLede,
+              label: Homepage intro — first line,
+              widget: text,
+              required: false,
+            }
+          - {
+              name: introNote,
+              label: Homepage intro — second line,
+              widget: text,
+              required: false,
+            }

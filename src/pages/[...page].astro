@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { SITE_TITLE, SITE_URL } from '../consts';
+
+export async function getStaticPaths() {
+  const reserved = new Set([
+    'archive',
+    'tags',
+    'search',
+    'posts',
+    'og',
+    'admin',
+    'drafts',
+    '404',
+    '',
+  ]);
+  const pages = await getCollection('pages');
+  return pages
+    .filter((p) => !p.data.draft || import.meta.env.DEV)
+    .map((p) => ({ slug: (p.data.slug ?? p.id).toLowerCase(), entry: p }))
+    .filter(({ slug }) => !reserved.has(slug))
+    .map(({ slug, entry }) => ({ params: { page: slug }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const slug = (entry.data.slug ?? entry.id).toLowerCase();
+const url = new URL(`/${slug}/`, SITE_URL).href;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: entry.data.title,
+  url,
+};
+---
+
+<BaseLayout
+  title={`${entry.data.title} — ${SITE_TITLE}`}
+  ogImage={`/og/${slug}.png`}
+  noindex={entry.data.draft}
+  jsonLd={jsonLd}
+>
+  <article class="page" data-pagefind-body>
+    <h1>{entry.data.title}</h1>
+    <div class="post-body">
+      <Content />
+    </div>
+  </article>
+</BaseLayout>

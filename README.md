@@ -33,6 +33,14 @@ triggers a deploy. **Save as draft** keeps a post off the live site (`draft:
 true`); **Publish** puts it live. Image uploads go to `public/uploads/` and are
 referenced as `/uploads/<file>`. Config: `public/admin/config.yml`.
 
+The editor also has:
+
+- **Pages** — standalone markdown pages (About, and any you add). Each serves
+  at `/<slug>/` via `src/pages/[...page].astro`; tick **Show a link in the top
+  navigation** to add it to the nav (with an order and optional label).
+- **Site text** — the tagline under the title and the two-line homepage
+  intro, backed by `src/content/site/settings.json`. Blank tagline hides it.
+
 ### By hand
 
 Add a markdown file to `src/content/posts/`. The filename becomes the URL.
@@ -189,15 +197,18 @@ are served from `public/_headers`; unmatched routes render `dist/404.html`
 ```
 src/
   consts.ts              site title, URL, author — nothing else hardcodes these
-  content.config.ts      post frontmatter schema
+  content.config.ts      posts + pages schemas
   content/posts/         the posts
+  content/pages/         standalone pages (About, …) — /admin "Pages"
+  content/site/settings.json   tagline + homepage intro — /admin "Site text"
   lib/posts.ts           sorting, draft filtering, dates, slugs, related-posts
+  lib/site.ts            reads settings.json
   lib/remark-reading-time.mjs   injects minutesRead into each post
   layouts/BaseLayout     head, meta, JSON-LD, share image, nav, analytics
-  components/            Intro (home + about), TagList, Comments
-  pages/                 index, about, archive, search, 404,
-                         posts/[...slug], tags/index, tags/[tag],
-                         og/[...slug].png, drafts.json
+  components/            Intro (homepage blurb), TagList, Comments
+  pages/                 index, archive, search, 404,
+                         [...page] (content/pages), posts/[...slug],
+                         tags/index, tags/[tag], og/[...slug].png, drafts.json
   styles/fonts.css       @font-face — latin subsets from public/fonts/
   styles/global.css      the whole design system
 public/                  favicon, robots.txt, _headers, fonts/

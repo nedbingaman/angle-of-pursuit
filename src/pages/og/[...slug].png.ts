@@ -15,10 +15,15 @@ const HEIGHT = 630;
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const posts = await getCollection('posts');
+  const pages = await getCollection('pages');
   return [
     { params: { slug: 'site' }, props: { title: SITE_TITLE, kicker: '' } },
     ...posts.map((p) => ({
       params: { slug: slugOf(p) },
+      props: { title: p.data.title, kicker: SITE_TITLE },
+    })),
+    ...pages.map((p) => ({
+      params: { slug: (p.data.slug ?? p.id).toLowerCase() },
       props: { title: p.data.title, kicker: SITE_TITLE },
     })),
   ];

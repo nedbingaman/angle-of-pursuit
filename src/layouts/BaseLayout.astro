@@ -2,7 +2,9 @@
 import '../styles/fonts.css';
 import '../styles/global.css';
 
+import { getCollection } from 'astro:content';
 import { SITE_TITLE, SITE_LANG } from '../consts';
+import { site } from '../lib/site';
 
 interface Props {
   title: string;
@@ -36,13 +38,22 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageUrl = new URL(ogImage, Astro.site).href;
 const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
 
+const pageNav = (await getCollection('pages'))
+  .filter((p) => p.data.nav && !p.data.draft)
+  .sort((a, b) => a.data.navOrder - b.data.navOrder)
+  .map((p) => ({
+    href: `/${(p.data.slug ?? p.id).toLowerCase()}/`,
+    label: p.data.navLabel ?? p.data.title,
+    order: p.data.navOrder,
+  }));
+
 const nav = [
-  { href: '/', label: 'Home' },
-  { href: '/archive/', label: 'Archive' },
-  { href: '/tags/', label: 'Tags' },
-  { href: '/search/', label: 'Search' },
-  { href: '/about/', label: 'About' },
-];
+  { href: '/', label: 'Home', order: 0 },
+  { href: '/archive/', label: 'Archive', order: 20 },
+  { href: '/tags/', label: 'Tags', order: 30 },
+  { href: '/search/', label: 'Search', order: 40 },
+  ...pageNav,
+].sort((a, b) => a.order - b.order);
 const here = Astro.url.pathname;
 ---
 
@@ -118,6 +129,7 @@ const here = Astro.url.pathname;
         ) : (
           <p class="wordmark"><a href="/">{SITE_TITLE}</a></p>
         )}
+        {site.tagline && <p class="tagline">{site.tagline}</p>}
         <nav class="site-nav" aria-label="Primary">
           {nav.map((item) => (
             <a
@@ -137,10 +149,7 @@ const here = Astro.url.pathname;
       </main>
 
       <footer class="site-footer" data-pagefind-ignore>
-        <a href="/">Home</a>
-        <a href="/archive/">Archive</a>
-        <a href="/tags/">Tags</a>
-        <a href="/about/">About</a>
+        {nav.map((item) => <a href={item.href}>{item.label}</a>)}
       </footer>
     </div>
   </body>

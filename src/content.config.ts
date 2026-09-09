@@ -22,4 +22,19 @@ const posts = defineCollection({
   }),
 });
 
-export const collections = { posts };
+// Standalone pages (About, and whatever gets added later). Rendered by
+// src/pages/[...page].astro at /<slug>/. Edited in /admin ("Pages").
+const pages = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/pages' }),
+  schema: z.object({
+    title: z.string(),
+    slug: z.string().optional(),
+    // Show a link in the top nav.
+    nav: z.boolean().default(false),
+    navLabel: z.string().optional(),
+    navOrder: z.number().default(50),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { posts, pages };

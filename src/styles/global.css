@@ -158,6 +158,12 @@ h1, h2, h3, h4 {
   color: var(--accent);
 }
 
+.tagline {
+  margin: 0.85rem 0 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
 .site-nav {
   margin-top: 1rem;
   display: flex;

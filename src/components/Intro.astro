@@ -1,16 +1,12 @@
 ---
-// The site's standing self-description. Rendered on the homepage (above the
-// post list) and on /about/. Placeholder copy — rewrite it in your own words;
-// both pages update together.
+// Homepage self-description. Text comes from src/content/site/settings.json,
+// editable at /admin ("Site text"). Renders nothing if both fields are blank.
+import { site } from '../lib/site';
 ---
 
-<div class="intro">
-  <p class="intro-lede">
-    A personal blog with no fixed subject — notes, arguments, and things that
-    seemed worth writing down.
-  </p>
-  <p>
-    New posts appear when there's something to post, not on a schedule.
-    Comments are open on every one.
-  </p>
-</div>
+{(site.introLede || site.introNote) && (
+  <div class="intro">
+    {site.introLede && <p class="intro-lede">{site.introLede}</p>}
+    {site.introNote && <p>{site.introNote}</p>}
+  </div>
+)}
