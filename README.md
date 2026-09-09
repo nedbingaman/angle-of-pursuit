@@ -17,6 +17,21 @@ Requires Node 22.12 or newer.
 
 ## Writing a post
 
+### In the browser
+
+Go to [`/admin`](https://angleofpursuit.com/admin) — the [Sveltia CMS](https://sveltiacms.app)
+editor. First visit per browser: click **Sign In with Token**, follow the link
+to GitHub (the right scopes are pre-selected), create a fine-grained token
+scoped to this repo with **Contents: Read and write**, and paste it back. The
+token is stored only in that browser.
+
+The editor writes markdown to `src/content/posts/` and pushes to `main`, which
+triggers a deploy. **Save as draft** keeps a post off the live site (`draft:
+true`); **Publish** puts it live. Image uploads go to `public/uploads/` and are
+referenced as `/uploads/<file>`. Config: `public/admin/config.yml`.
+
+### By hand
+
 Add a markdown file to `src/content/posts/`. The filename becomes the URL.
 
 ```markdown
@@ -106,5 +121,7 @@ src/
   components/            Intro (shared by home + about), TagList, Comments
   pages/                 index, about, 404, posts/[...slug], tags/[tag]
   styles/global.css      the whole design system
-public/                  favicon, robots.txt
+public/                  favicon, robots.txt, _headers
+  admin/                 Sveltia CMS — the /admin browser editor + its config
+  uploads/               images added through the editor
 ```

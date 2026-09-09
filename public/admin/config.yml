@@ -1,0 +1,83 @@
+# Sveltia CMS — the browser editor served at /admin/.
+# Docs: https://sveltiacms.app
+#
+# It writes posts straight to this repo as markdown; the push triggers the
+# normal Cloudflare build, so a published post is live in a minute or two.
+#
+# Signing in (one time per browser): click "Sign In with Token" on the login
+# screen. It links you to GitHub's token page with the right scopes already
+# selected — generate a fine-grained token limited to this repo with
+# "Contents: Read and write", paste it back, done. The token lives only in
+# this browser's local storage.
+
+backend:
+  name: github
+  repo: nedbingaman/angle-of-pursuit
+  branch: main
+  commit_messages:
+    create: 'Add post "{{slug}}"'
+    update: 'Update post "{{slug}}"'
+    delete: 'Delete post "{{slug}}"'
+    uploadMedia: 'Upload {{path}}'
+    deleteMedia: 'Delete {{path}}'
+
+site_url: https://angleofpursuit.com
+display_url: https://angleofpursuit.com
+
+# Uploaded images are committed here and referenced in markdown as /uploads/…
+media_folder: public/uploads
+public_folder: /uploads
+
+collections:
+  - name: posts
+    label: Posts
+    label_singular: Post
+    folder: src/content/posts
+    create: true
+    extension: md
+    format: frontmatter
+    # Filename (and therefore the URL) comes from the slug override if set,
+    # otherwise from the title. Matches src/lib/posts.ts.
+    slug: '{{fields.slug | default: title}}'
+    summary: '{{title}}  ·  {{date}}'
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: Title, widget: string }
+      - {
+          name: date,
+          label: Date,
+          widget: datetime,
+          date_format: 'YYYY-MM-DD',
+          time_format: false,
+          picker_utc: true,
+        }
+      - {
+          name: excerpt,
+          label: Excerpt,
+          widget: text,
+          required: false,
+          hint: 'One line shown on the front page. Optional.',
+        }
+      - {
+          name: tags,
+          label: Tags,
+          widget: list,
+          required: false,
+          hint: 'Free-form. Each tag gets its own page at /tags/.',
+        }
+      - {
+          name: slug,
+          label: URL slug override,
+          widget: string,
+          required: false,
+          hint: 'Leave blank to use the title. Set it to lock the URL so the post can be renamed later without breaking links.',
+        }
+      - {
+          name: editedNote,
+          label: Edited note,
+          widget: string,
+          required: false,
+          hint: 'Fill in after a substantive revision — adds an "Edited:" line at the foot of the post.',
+        }
+      - { name: draft, label: 'Draft — kept off the live site', widget: boolean, default: false }
+      - { name: body, label: Body, widget: markdown }

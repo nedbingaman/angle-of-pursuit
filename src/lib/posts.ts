@@ -8,8 +8,13 @@ export type Post = CollectionEntry<'posts'>;
  */
 export const isVisible = (post: Post) => !post.data.draft || import.meta.env.DEV;
 
-/** URL slug for a post: the optional frontmatter override, else the filename. */
-export const slugOf = (post: Post) => post.data.slug ?? post.id;
+/**
+ * URL slug for a post: the optional frontmatter override, else the filename.
+ * `||` not `??` — an empty `slug:` (which the /admin editor can write when the
+ * override field is left blank) must fall through to the filename, not become
+ * an empty path segment.
+ */
+export const slugOf = (post: Post) => post.data.slug || post.id;
 
 /** Site-root-relative path for a post. */
 export const pathOf = (post: Post) => `/posts/${slugOf(post)}/`;
