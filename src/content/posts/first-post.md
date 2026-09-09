@@ -2,8 +2,11 @@
 title: How this works
 date: 2026-09-08
 excerpt: A short note on the post format, kept here for reference. Delete it once there's a real first post.
-tags: [meta]
-draft: true
+tags:
+  - meta
+slug: ''
+editedNote: ''
+draft: false
 ---
 
 Every post is a markdown file in `src/content/posts/`. The frontmatter at the
