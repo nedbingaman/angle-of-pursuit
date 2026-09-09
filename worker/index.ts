@@ -44,14 +44,15 @@ const RATE_MAX_IN_WINDOW = 5;
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '').toLowerCase() || '/';
 
-    if (url.pathname === '/api/comments') {
+    if (path === '/api/comments') {
       if (request.method === 'GET') return getComments(url, env);
       if (request.method === 'POST') return postComment(request, env);
       return json({ error: 'method not allowed' }, 405, { Allow: 'GET, POST' });
     }
 
-    if (url.pathname === '/moderate' || url.pathname === '/moderate/') {
+    if (path === '/moderate') {
       return moderate(request, env);
     }
 
