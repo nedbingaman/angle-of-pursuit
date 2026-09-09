@@ -1,35 +1,38 @@
 ---
-// Giscus comments, backed by GitHub Discussions (per spec section 4).
+// Cusdis comments (https://cusdis.com). Lightweight and privacy-friendly:
+// readers leave a name and an optional email, no account or login. New
+// comments are held for your approval from the Cusdis dashboard.
 //
-// Setup: enable Discussions on the repo, run https://giscus.app against it,
-// then copy the values it gives you into .env (see .env.example). Until those
-// are set this component renders nothing, so the site is safe to deploy
-// before comments are wired up.
-const repo = import.meta.env.PUBLIC_GISCUS_REPO;
-const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID;
-const category = import.meta.env.PUBLIC_GISCUS_CATEGORY;
-const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID;
+// Renders nothing until PUBLIC_CUSDIS_APP_ID is set — in `.env` locally and
+// in the Cloudflare build environment. PUBLIC_CUSDIS_HOST defaults to the
+// hosted service; set it only when self-hosting.
+interface Props {
+  /**
+   * Stable per-post identifier — the post slug. Never change it for a given
+   * post or the thread detaches from its existing comments.
+   */
+  id: string;
+  title: string;
+}
 
-const configured = Boolean(repo && repoId && category && categoryId);
+const { id, title } = Astro.props;
+
+const appId = import.meta.env.PUBLIC_CUSDIS_APP_ID;
+const host = import.meta.env.PUBLIC_CUSDIS_HOST ?? 'https://cusdis.com';
+const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
 ---
 
-{configured && (
-  <div class="comments">
-    <script
-      is:inline
-      src="https://giscus.app/client.js"
-      data-repo={repo}
-      data-repo-id={repoId}
-      data-category={category}
-      data-category-id={categoryId}
-      data-mapping="pathname"
-      data-strict="1"
-      data-reactions-enabled="1"
-      data-emit-metadata="0"
-      data-input-position="bottom"
-      data-theme="preferred_color_scheme"
-      data-lang="en"
-      crossorigin="anonymous"
-      async></script>
-  </div>
+{appId && (
+  <section class="comments">
+    <div
+      id="cusdis_thread"
+      data-host={host}
+      data-app-id={appId}
+      data-page-id={id}
+      data-page-url={pageUrl}
+      data-page-title={title}
+      data-theme="auto"
+    ></div>
+    <script is:inline async defer src={`${host}/js/cusdis.es.js`}></script>
+  </section>
 )}

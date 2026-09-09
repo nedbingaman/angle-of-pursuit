@@ -6,7 +6,7 @@ import { SITE_URL } from './src/consts.js';
 
 // https://astro.build/config
 export default defineConfig({
-  // Absolute base URL. Required for RSS, sitemap, and canonical/OG tags.
+  // Absolute base URL. Required for the sitemap and canonical/OG tags.
   site: SITE_URL,
   integrations: [sitemap()],
   markdown: {

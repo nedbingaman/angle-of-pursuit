@@ -43,5 +43,5 @@ const { Content } = await render(post);
     </footer>
   </article>
 
-  <Comments />
+  <Comments id={slugOf(post)} title={post.data.title} />
 </BaseLayout>
