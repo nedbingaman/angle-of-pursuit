@@ -1,38 +1,158 @@
 ---
-// Cusdis comments (https://cusdis.com). Lightweight and privacy-friendly:
-// readers leave a name and an optional email, no account or login. New
-// comments are held for your approval from the Cusdis dashboard.
+// Native comments. The list and form are rendered here; the browser fetches
+// approved comments from /api/comments (served by worker/index.ts, backed by
+// D1) and posts new ones there. New comments are held until approved at
+// /moderate.
 //
-// Renders nothing until PUBLIC_CUSDIS_APP_ID is set — in `.env` locally and
-// in the Cloudflare build environment. PUBLIC_CUSDIS_HOST defaults to the
-// hosted service; set it only when self-hosting.
+// PUBLIC_TURNSTILE_SITEKEY enables the Cloudflare Turnstile check on the form.
+// Without it the section still renders and reads, but the form is hidden
+// (posting would fail Turnstile verification server-side).
 interface Props {
-  /**
-   * Stable per-post identifier — the post slug. Never change it for a given
-   * post or the thread detaches from its existing comments.
-   */
+  /** Post slug — the key comments are stored under. */
   id: string;
   title: string;
 }
 
-const { id, title } = Astro.props;
-
-const appId = import.meta.env.PUBLIC_CUSDIS_APP_ID;
-const host = import.meta.env.PUBLIC_CUSDIS_HOST ?? 'https://cusdis.com';
-const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
+const { id } = Astro.props;
+const turnstileSitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY;
 ---
 
-{appId && (
-  <section class="comments">
-    <div
-      id="cusdis_thread"
-      data-host={host}
-      data-app-id={appId}
-      data-page-id={id}
-      data-page-url={pageUrl}
-      data-page-title={title}
-      data-theme="auto"
-    ></div>
-    <script is:inline async defer src={`${host}/js/cusdis.es.js`}></script>
-  </section>
+<section class="comments" data-post={id}>
+  <h2>Comments</h2>
+
+  <ol class="comment-list" aria-live="polite"></ol>
+  <p class="comment-msg" data-role="list-msg">Loading comments…</p>
+
+  {turnstileSitekey && (
+    <form class="comment-form" novalidate>
+      <p class="comment-msg" data-role="form-msg" role="status" hidden></p>
+
+      <label>
+        <span>Name</span>
+        <input type="text" name="author" maxlength="80" required autocomplete="name" />
+      </label>
+
+      <label>
+        <span>Comment</span>
+        <textarea name="body" maxlength="4000" rows="5" required></textarea>
+      </label>
+
+      <div class="comment-hp" aria-hidden="true">
+        <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <div
+        class="cf-turnstile"
+        data-sitekey={turnstileSitekey}
+        data-theme="auto"
+        data-appearance="interaction-only"
+      ></div>
+
+      <button type="submit">Post comment</button>
+      <p class="comment-note">Held for review before it appears. No account needed; your name shows, nothing else.</p>
+    </form>
+  )}
+</section>
+
+{turnstileSitekey && (
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 )}
+
+<script>
+  (() => {
+    const section = document.querySelector<HTMLElement>('.comments[data-post]');
+    if (!section) return;
+    const post = section.dataset.post!;
+    const list = section.querySelector<HTMLOListElement>('.comment-list')!;
+    const listMsg = section.querySelector<HTMLElement>('[data-role="list-msg"]')!;
+    const form = section.querySelector<HTMLFormElement>('.comment-form');
+
+    const fmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const parseUTC = (s: string) => new Date(s.replace(' ', 'T') + 'Z');
+
+    function render(comments: Array<{ id: number; author: string; body: string; created_at: string }>) {
+      list.replaceChildren();
+      for (const c of comments) {
+        const li = document.createElement('li');
+        li.className = 'comment';
+
+        const meta = document.createElement('div');
+        meta.className = 'comment-meta';
+        const name = document.createElement('span');
+        name.className = 'comment-author';
+        name.textContent = c.author;
+        const time = document.createElement('time');
+        const d = parseUTC(c.created_at);
+        time.dateTime = d.toISOString();
+        time.textContent = fmt.format(d);
+        meta.append(name, document.createTextNode(' · '), time);
+
+        const body = document.createElement('div');
+        body.className = 'comment-body';
+        body.textContent = c.body; // text only — never innerHTML
+
+        li.append(meta, body);
+        list.append(li);
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/comments?post=${encodeURIComponent(post)}`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const { comments } = (await res.json()) as { comments: any[] };
+        render(comments);
+        listMsg.textContent = comments.length ? '' : 'No comments yet.';
+        listMsg.hidden = comments.length > 0;
+      } catch {
+        listMsg.textContent = 'Couldn’t load comments.';
+        listMsg.hidden = false;
+      }
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = form.querySelector<HTMLElement>('[data-role="form-msg"]')!;
+        const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        const fd = new FormData(form);
+
+        const turnstile = (window as any).turnstile;
+        const token = turnstile?.getResponse?.() ?? '';
+
+        msg.hidden = false;
+        msg.className = 'comment-msg';
+        msg.textContent = 'Posting…';
+        button.disabled = true;
+
+        try {
+          const res = await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              post,
+              author: fd.get('author'),
+              body: fd.get('body'),
+              website: fd.get('website'),
+              turnstileToken: token,
+            }),
+          });
+          const out = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) throw new Error(out.error || 'Something went wrong.');
+          form.reset();
+          turnstile?.reset?.();
+          msg.textContent = 'Thanks — your comment is in the queue and will appear once approved.';
+        } catch (err) {
+          msg.className = 'comment-msg comment-msg-error';
+          msg.textContent = err instanceof Error ? err.message : 'Something went wrong.';
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+
+    load();
+  })();
+</script>

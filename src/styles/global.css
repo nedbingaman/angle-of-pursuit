@@ -481,3 +481,113 @@ code {
   padding-top: 2rem;
   border-top: 1px solid var(--rule);
 }
+
+.comments h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0 0 1.5rem;
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+}
+
+.comment {
+  padding: 1rem 0;
+  border-top: 1px solid var(--rule);
+}
+.comment:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.comment-meta {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  margin-bottom: 0.35rem;
+}
+.comment-author {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.comment-msg {
+  font-size: 0.9375rem;
+  color: var(--ink-muted);
+}
+.comment-msg-error {
+  color: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  .comment-msg-error {
+    color: #f2b8b5;
+  }
+}
+
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 48ch;
+}
+.comment-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.comment-form input[type='text'],
+.comment-form textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.5rem 0.6rem;
+}
+.comment-form input[type='text']:focus,
+.comment-form textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.comment-form textarea {
+  resize: vertical;
+}
+.comment-form button {
+  align-self: flex-start;
+  font: inherit;
+  cursor: pointer;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1.1rem;
+}
+.comment-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.comment-note {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+/* Honeypot — off-screen, not display:none, so bots still fill it. */
+.comment-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

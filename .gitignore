@@ -31,3 +31,6 @@ pnpm-debug.log*
 .netlify/
 .vercel/
 .wrangler/
+
+# wrangler local secrets
+.dev.vars

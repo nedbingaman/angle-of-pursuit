@@ -10,7 +10,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "astro check"
+    "check": "astro check",
+    "check:worker": "tsc -p worker/tsconfig.json",
+    "cf:dev": "astro build && wrangler dev",
+    "cf:migrate": "wrangler d1 execute angle-of-pursuit-comments --remote --file=migrations/0001_init.sql",
+    "cf:migrate:local": "wrangler d1 execute angle-of-pursuit-comments --local --file=migrations/0001_init.sql"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -21,6 +25,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260908.1",
     "typescript": "^6.0.3",
     "wrangler": "^4.130.0"
   }

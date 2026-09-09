@@ -67,23 +67,42 @@ site.
 
 ## Comments
 
-Comments use [Cusdis](https://cusdis.com) — no reader login, just a name and
-an optional email. New comments are held for approval in the Cusdis dashboard.
-Nothing renders until it is configured:
+Comments are the site's own — no third-party service, no reader login. The
+list and form render in `src/components/Comments.astro`; the browser reads
+approved comments from `/api/comments` and posts new ones there. That endpoint
+is the Cloudflare Worker in `worker/index.ts`, storing comments in a D1
+database. New comments are held until approved.
 
-1. Sign in at cusdis.com and create a project for this site.
-2. Copy the project's App ID (a UUID).
-3. Copy `.env.example` to `.env` and set `PUBLIC_CUSDIS_APP_ID`.
-4. Set the same variable in the Cloudflare Worker's build environment.
+Spam defence: a [Turnstile](https://developers.cloudflare.com/turnstile/)
+check, an off-screen honeypot field, and a per-IP rate limit (5 / 10 min;
+only a salted hash of the IP is stored).
 
-The App ID is a public value that ships in the built HTML, not a secret. Set
-`PUBLIC_CUSDIS_HOST` only if self-hosting Cusdis.
+Setup:
+
+1. **D1 database** — `npx wrangler d1 create angle-of-pursuit-comments`, put
+   the printed `database_id` in `wrangler.jsonc`, then apply the schema:
+   `npm run cf:migrate` (add `:local` for the dev copy).
+2. **Turnstile** — dashboard → Turnstile → add a widget for
+   `angleofpursuit.com`. Put the **site key** in `.env` as
+   `PUBLIC_TURNSTILE_SITEKEY` and as a Worker build variable; set the
+   **secret key** as the `TURNSTILE_SECRET` Worker secret.
+3. **Worker secrets** — `wrangler secret put` each of `TURNSTILE_SECRET`,
+   `MODERATION_USER`, `MODERATION_PASS`, `IP_SALT` (or add them in the
+   dashboard as encrypted variables).
+
+### Moderating
+
+Visit `/moderate` and sign in with `MODERATION_USER` / `MODERATION_PASS`
+(HTTP Basic auth). Approve or delete pending comments; delete approved ones.
+The page is `noindex` and served only by the Worker.
 
 ## Deploying
 
-Hosted on [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/)
-as an assets-only Worker (no server code), built from the `main` branch of the
-GitHub repo. Config is in `wrangler.jsonc`.
+Hosted on [Cloudflare Workers](https://developers.cloudflare.com/workers/).
+`worker/index.ts` runs in front of the static build: it handles
+`/api/comments` and `/moderate` and serves everything else from `./dist` via
+the `ASSETS` binding. Built from the `main` branch of the GitHub repo; config
+in `wrangler.jsonc`.
 
 | Setting | Value |
 | --- | --- |
@@ -91,14 +110,16 @@ GitHub repo. Config is in `wrangler.jsonc`.
 | Deploy command | `npx wrangler deploy` |
 | Assets directory | `./dist` (set in `wrangler.jsonc`) |
 | Node version | `22.12.0` (pinned in `.nvmrc`) |
+| Bindings | `DB` (D1), `ASSETS` (static build) |
 
 Every push to `main` triggers a production deploy; pushes to other branches
-get a preview URL. Set `PUBLIC_CUSDIS_APP_ID` (see Comments) in the Worker's
-build-environment settings, matching `.env`.
+get a preview URL. Set `PUBLIC_TURNSTILE_SITEKEY` (see Comments) as a Worker
+build variable, matching `.env`; set the Worker *secrets* separately.
 
 `npx wrangler deploy` also works from a local checkout once `npm run build`
-has produced `dist/`. Security and cache headers are served from
-`public/_headers`; unmatched routes render `dist/404.html`
+has produced `dist/`. `npm run cf:dev` builds and runs the whole thing
+(Worker + assets + local D1) at `localhost:8787`. Security and cache headers
+are served from `public/_headers`; unmatched routes render `dist/404.html`
 (`not_found_handling` in `wrangler.jsonc`).
 
 ## Before deploying
@@ -124,4 +145,6 @@ src/
 public/                  favicon, robots.txt, _headers
   admin/                 Sveltia CMS — the /admin browser editor + its config
   uploads/               images added through the editor
+worker/index.ts          Cloudflare Worker: /api/comments + /moderate, else ./dist
+migrations/               D1 schema for comments
 ```
