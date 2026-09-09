@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getPosts, pathOf, formatDate, machineDate, tagSlug, type Post } from '../../lib/posts';
+import { SITE_TITLE } from '../../consts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+
+  // Tags come entirely from post frontmatter — nothing is predefined here.
+  const byTag = new Map<string, { label: string; posts: Post[] }>();
+  for (const post of posts) {
+    for (const tag of post.data.tags) {
+      const slug = tagSlug(tag);
+      if (!slug) continue;
+      const entry = byTag.get(slug) ?? { label: tag, posts: [] };
+      entry.posts.push(post);
+      byTag.set(slug, entry);
+    }
+  }
+
+  return [...byTag].map(([slug, { label, posts }]) => ({
+    params: { tag: slug },
+    props: { label, posts },
+  }));
+}
+
+const { label, posts } = Astro.props;
+---
+
+<BaseLayout title={`${label} — ${SITE_TITLE}`} description={`Posts tagged ${label}.`}>
+  <article class="page">
+    <h1>Tagged &ldquo;{label}&rdquo;</h1>
+    <ul class="post-list">
+      {posts.map((post) => (
+        <li class="post-entry">
+          <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+          <h2><a href={pathOf(post)}>{post.data.title}</a></h2>
+          {post.data.excerpt && <p>{post.data.excerpt}</p>}
+        </li>
+      ))}
+    </ul>
+  </article>
+</BaseLayout>

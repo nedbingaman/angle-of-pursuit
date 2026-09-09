@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_TITLE } from '../consts';
+---
+
+<BaseLayout title={`Not found — ${SITE_TITLE}`} description="That page doesn’t exist.">
+  <article class="page">
+    <h1>Nothing here</h1>
+    <p>
+      That address doesn’t match anything on the site. It may have been renamed,
+      or it may never have existed. <a href="/">Start from the front page</a>.
+    </p>
+  </article>
+</BaseLayout>

@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Intro from '../components/Intro.astro';
+import { getPosts, pathOf, formatDate, machineDate } from '../lib/posts';
+import { SITE_TITLE } from '../consts';
+
+const posts = await getPosts();
+---
+
+<BaseLayout title={SITE_TITLE} isHome>
+  <Intro />
+
+  {posts.length === 0 ? (
+    <p class="empty-state">
+      No posts yet. The first one goes in <code>src/content/posts/</code> as a
+      markdown file.
+    </p>
+  ) : (
+    <ul class="post-list">
+      {posts.map((post) => (
+        <li class="post-entry">
+          {post.data.draft && <span class="draft-flag">Draft — hidden in production</span>}
+          <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+          <h2><a href={pathOf(post)}>{post.data.title}</a></h2>
+          {post.data.excerpt && <p>{post.data.excerpt}</p>}
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>

@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Comments from '../../components/Comments.astro';
+import TagList from '../../components/TagList.astro';
+import { getPosts, slugOf, formatDate, machineDate } from '../../lib/posts';
+import { SITE_TITLE } from '../../consts';
+import { render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({
+    params: { slug: slugOf(post) },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout
+  title={`${post.data.title} — ${SITE_TITLE}`}
+  description={post.data.excerpt}
+  ogType="article"
+  publishedTime={post.data.date}
+>
+  <article class="post">
+    <header class="post-head">
+      {post.data.draft && <p class="draft-flag">Draft — hidden in production</p>}
+      <time datetime={machineDate(post.data.date)}>{formatDate(post.data.date)}</time>
+      <h1>{post.data.title}</h1>
+    </header>
+
+    <div class="post-body">
+      <Content />
+    </div>
+
+    <footer class="post-foot">
+      <TagList tags={post.data.tags} />
+      {post.data.editedNote && (
+        <p class="edit-note">Edited: {post.data.editedNote}</p>
+      )}
+    </footer>
+  </article>
+
+  <Comments />
+</BaseLayout>

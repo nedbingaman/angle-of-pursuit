@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Intro from '../components/Intro.astro';
+import { SITE_TITLE } from '../consts';
+---
+
+<BaseLayout title={`About — ${SITE_TITLE}`} description="What this blog is and isn’t.">
+  <article class="page">
+    <h1>About</h1>
+    <Intro />
+    <p>
+      Everything here is written as plain markdown and kept in a repository I
+      control, so it can move somewhere else whenever it needs to. There’s no
+      tracking, no mailing list, and nothing for sale.
+    </p>
+  </article>
+</BaseLayout>

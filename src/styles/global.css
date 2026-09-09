@@ -1,0 +1,490 @@
+/* ---------------------------------------------------------------------------
+   Design system — see PROJECT_SPEC.md §9.
+   Fonts are self-hosted (@fontsource) and imported in BaseLayout.astro.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --bg: #f5f5f2;
+  --ink: #14171a;
+  --ink-muted: #6b6f76;
+  --accent: #3f5d54;
+  --rule: #dfddd6;
+  /* Tinted fill for quotes, code, tags. */
+  --wash: #e9ece9;
+
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-body: 'Public Sans Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  --content-width: 640px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181a;
+    --ink: #e7e5df;
+    --ink-muted: #9aa09d;
+    --accent: #93b8a9;
+    --rule: #2a2e30;
+    --wash: #1e2422;
+
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--wash);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.wrap {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  .intro-lede {
+    font-size: 1.1875rem;
+  }
+
+  .post h1,
+  .page h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* --- links ---------------------------------------------------------------- */
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 120ms ease;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--rule);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+/* --- headings ------------------------------------------------------------- */
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* --- masthead ------------------------------------------------------------- */
+
+.site-header {
+  margin-bottom: 3rem;
+}
+
+.wordmark {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  /* Fraunces' "wonk" alternates — the one place the type gets to be odd. */
+  font-variation-settings: 'WONK' 1;
+}
+
+.wordmark a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.15rem;
+}
+
+.wordmark a:hover {
+  color: var(--accent);
+}
+
+.tagline {
+  display: block;
+  margin-top: 0.85rem;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
+/* --- intro ---------------------------------------------------------------- */
+
+.intro {
+  margin-bottom: 3rem;
+}
+
+.intro p {
+  margin: 0 0 1.1em;
+  max-width: 60ch;
+}
+
+.intro p:not(.intro-lede) {
+  color: var(--ink-muted);
+}
+
+.intro-lede {
+  font-family: var(--font-display);
+  font-size: 1.3125rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* --- post list ------------------------------------------------------------ */
+
+.post-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.post-entry {
+  position: relative;
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--rule);
+}
+
+.post-entry:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+
+.post-entry::before {
+  content: '';
+  position: absolute;
+  left: -1.25rem;
+  top: 1.75rem;
+  bottom: 1.75rem;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.post-entry:hover::before {
+  opacity: 1;
+}
+
+@media (max-width: 720px) {
+  .post-entry::before {
+    display: none;
+  }
+}
+
+.post-entry time {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.45rem;
+}
+
+.post-entry h2 {
+  font-size: 1.375rem;
+}
+
+.post-entry h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.post-entry h2 a:hover {
+  color: var(--accent);
+}
+
+.post-entry p {
+  margin: 0.5rem 0 0;
+  color: var(--ink-muted);
+  max-width: 60ch;
+}
+
+.empty-state {
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-muted);
+  max-width: 55ch;
+}
+
+.draft-flag {
+  display: inline-block;
+  margin: 0 0 0.6rem;
+  padding: 0.1rem 0.5rem;
+  background: var(--wash);
+  color: var(--accent);
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+
+/* --- single post ---------------------------------------------------------- */
+
+.post-head {
+  margin-bottom: 2.5rem;
+}
+
+.post-head time {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  margin-bottom: 0.6rem;
+}
+
+.post h1,
+.page h1 {
+  font-size: 2.125rem;
+  line-height: 1.1;
+  max-width: 22ch;
+}
+
+.page h1 {
+  margin-bottom: 1.5rem;
+}
+
+.post-body,
+.page p {
+  max-width: 66ch;
+}
+
+.post-body > *:first-child {
+  margin-top: 0;
+}
+
+.post-body p,
+.page p {
+  margin: 0 0 1.4em;
+}
+
+.post-body h2 {
+  font-size: 1.375rem;
+  margin: 2.4em 0 0.7em;
+}
+
+.post-body h3 {
+  font-size: 1.125rem;
+  margin: 2em 0 0.6em;
+}
+
+.post-body ul,
+.post-body ol {
+  margin: 0 0 1.4em;
+  padding-left: 1.35em;
+}
+
+.post-body li {
+  margin-bottom: 0.4em;
+}
+
+.post-body li::marker {
+  color: var(--accent);
+}
+
+.post-body blockquote {
+  margin: 1.8em 0;
+  padding: 0.15em 0 0.15em 1.25em;
+  border-left: 2px solid var(--accent);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+.post-body blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.post-body hr {
+  width: 5rem;
+  margin: 3rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.post-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 2em 0;
+}
+
+.post-body table {
+  width: 100%;
+  margin: 1.8em 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.post-body th,
+.post-body td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  text-align: left;
+  border-bottom: 1px solid var(--rule);
+}
+
+.post-body th {
+  font-weight: 600;
+}
+
+/* Long URLs and unbroken strings must not blow out the column. */
+.post-body,
+.post-entry p,
+.intro p {
+  overflow-wrap: anywhere;
+}
+
+/* --- code ----------------------------------------------------------------- */
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+.post-body :not(pre) > code {
+  background: var(--wash);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+.post-body pre {
+  margin: 1.8em 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  background: var(--wash);
+}
+
+/* Shiki emits both themes as custom properties. Take the syntax colors only —
+   the block's background comes from --wash so it sits on the paper, not on
+   whatever background the highlighting theme happens to ship. */
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  background: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .astro-code,
+  .astro-code span {
+    color: var(--shiki-dark);
+  }
+}
+
+/* --- post footer ---------------------------------------------------------- */
+
+.post-foot {
+  margin-top: 3rem;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-list a {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  background: var(--wash);
+  border-radius: 3px;
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.tag-list a:hover {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.edit-note {
+  margin: 1.75rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  max-width: 60ch;
+}
+
+/* --- footer & comments ---------------------------------------------------- */
+
+.site-footer {
+  margin-top: 5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.site-footer a {
+  color: var(--ink-muted);
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+}
+
+.comments {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+}
