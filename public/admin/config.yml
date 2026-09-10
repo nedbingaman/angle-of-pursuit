@@ -79,6 +79,16 @@ collections:
           required: false,
           hint: 'Fill in after a substantive revision — adds an "Edited:" line at the foot of the post.',
         }
+      - {
+          name: updated,
+          label: Edited on,
+          widget: datetime,
+          required: false,
+          date_format: 'YYYY-MM-DD',
+          time_format: false,
+          picker_utc: true,
+          hint: 'Date of that edit. Shown next to the note and used for dateModified.',
+        }
       - { name: draft, label: 'Draft — kept off the live site', widget: boolean, default: false }
       - { name: body, label: Body, widget: markdown }
 

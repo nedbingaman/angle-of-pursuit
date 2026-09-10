@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_TITLE } from '../consts';
 ---
 
-<BaseLayout title={`Not found — ${SITE_TITLE}`} description="That page doesn’t exist.">
+<BaseLayout title={`Not found — ${SITE_TITLE}`} noindex>
   <article class="page">
     <h1>Where do you think you are going?</h1>
     <p>This page has never existed and will never exist.</p>

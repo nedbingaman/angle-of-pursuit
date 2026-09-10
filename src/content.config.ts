@@ -18,6 +18,8 @@ const posts = defineCollection({
     // Set on a post you've edited substantively after publishing.
     // Pairs with the "edited" note rendered on the post page.
     editedNote: z.string().optional(),
+    // Date of that substantive edit; feeds dateModified in structured data.
+    updated: z.coerce.date().optional(),
     draft: z.boolean().default(false),
   }),
 });

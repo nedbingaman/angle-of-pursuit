@@ -21,8 +21,11 @@
   color-scheme: light;
 }
 
+/* Dark palette. Applied when the OS prefers dark (and the reader hasn't
+   forced light), or when the reader has explicitly chosen dark. The two
+   selectors carry the same values — keep them in sync. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #16181a;
     --ink: #e7e5df;
     --ink-muted: #9aa09d;
@@ -32,6 +35,17 @@
 
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #16181a;
+  --ink: #e7e5df;
+  --ink-muted: #9aa09d;
+  --accent: #93b8a9;
+  --rule: #2a2e30;
+  --wash: #1e2422;
+
+  color-scheme: dark;
 }
 
 * {
@@ -184,6 +198,24 @@ h1, h2, h3, h4 {
 .site-nav a[aria-current] {
   color: var(--ink);
   border-bottom: 1px solid var(--accent);
+}
+
+.theme-toggle {
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  color: var(--accent);
+}
+/* No JS ⇒ no way to act on it. */
+html:not(.js) .theme-toggle {
+  display: none;
 }
 
 /* --- intro ---------------------------------------------------------------- */
@@ -440,10 +472,14 @@ code {
 }
 
 @media (prefers-color-scheme: dark) {
-  .astro-code,
-  .astro-code span {
+  :root:not([data-theme='light']) .astro-code,
+  :root:not([data-theme='light']) .astro-code span {
     color: var(--shiki-dark);
   }
+}
+:root[data-theme='dark'] .astro-code,
+:root[data-theme='dark'] .astro-code span {
+  color: var(--shiki-dark);
 }
 
 /* --- post footer ---------------------------------------------------------- */
@@ -554,9 +590,12 @@ code {
   color: #b3261e;
 }
 @media (prefers-color-scheme: dark) {
-  .comment-msg-error {
+  :root:not([data-theme='light']) .comment-msg-error {
     color: #f2b8b5;
   }
+}
+:root[data-theme='dark'] .comment-msg-error {
+  color: #f2b8b5;
 }
 
 .comment-form {
@@ -773,5 +812,54 @@ code {
   .archive-year li {
     flex-direction: column;
     gap: 0.15rem;
+  }
+}
+
+/* --- print --------------------------------------------------------------- */
+
+@media print {
+  :root {
+    --bg: #fff;
+    --ink: #000;
+    --ink-muted: #333;
+    --accent: #000;
+    --rule: #999;
+    --wash: #eee;
+  }
+  .site-nav,
+  .site-footer,
+  .skip-link,
+  .comments,
+  .post-nav,
+  .related,
+  .more-link {
+    display: none;
+  }
+  .wrap {
+    max-width: none;
+    padding: 0;
+  }
+  a {
+    text-decoration: underline;
+  }
+  /* Show link targets after the text. */
+  .post-body a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  .post-body {
+    max-width: none;
+  }
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+  pre,
+  blockquote,
+  figure,
+  img {
+    page-break-inside: avoid;
   }
 }

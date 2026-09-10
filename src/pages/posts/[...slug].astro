@@ -43,20 +43,35 @@ interface Props {
 const { post, newer, older, related } = Astro.props;
 const { Content, remarkPluginFrontmatter } = await render(post);
 const minutesRead: number | undefined = remarkPluginFrontmatter?.minutesRead;
+const wordCount: number | undefined = remarkPluginFrontmatter?.wordCount;
 
 const url = new URL(pathOf(post), SITE_URL).href;
-const jsonLd = {
-  '@context': 'https://schema.org',
+const modified = post.data.updated ?? post.data.date;
+
+const blogPosting = {
   '@type': 'BlogPosting',
   headline: post.data.title,
   datePublished: machineDate(post.data.date),
+  dateModified: machineDate(modified),
   ...(post.data.excerpt ? { description: post.data.excerpt } : {}),
+  ...(post.data.tags.length ? { keywords: post.data.tags.join(', ') } : {}),
+  ...(wordCount ? { wordCount } : {}),
   author: { '@type': 'Organization', name: SITE_AUTHOR },
   publisher: { '@type': 'Organization', name: SITE_TITLE },
   mainEntityOfPage: url,
   url,
   image: new URL(`/og/${slugOf(post)}.png`, SITE_URL).href,
 };
+
+const breadcrumb = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+    { '@type': 'ListItem', position: 2, name: post.data.title, item: url },
+  ],
+};
+
+const jsonLd = { '@context': 'https://schema.org', '@graph': [blogPosting, breadcrumb] };
 ---
 
 <BaseLayout
@@ -85,7 +100,9 @@ const jsonLd = {
     <footer class="post-foot">
       <TagList tags={post.data.tags} />
       {post.data.editedNote && (
-        <p class="edit-note">Edited: {post.data.editedNote}</p>
+        <p class="edit-note">
+          Edited{post.data.updated && ` ${formatDate(post.data.updated)}`}: {post.data.editedNote}
+        </p>
       )}
     </footer>
   </article>

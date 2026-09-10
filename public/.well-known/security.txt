@@ -1,0 +1,4 @@
+# https://securitytxt.org
+Contact: https://angleofpursuit.com/about/
+Expires: 2027-09-10T08:42:44Z
+Preferred-Languages: en

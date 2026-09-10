@@ -62,8 +62,21 @@ const here = Astro.url.pathname;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      /* NOTE: the CSP in public/_headers pins a sha256 of this exact script.
+         Change the text ⇒ regenerate that hash. */
+      // Mark JS available (gates the theme toggle) and apply a saved theme
+      // override before first paint (no flash).
+      document.documentElement.classList.add('js');
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     {description && <meta name="description" content={description} />}
@@ -141,6 +154,9 @@ const here = Astro.url.pathname;
               {item.label}
             </a>
           ))}
+          <button class="theme-toggle" type="button" aria-label="Toggle light or dark theme">
+            <span aria-hidden="true">◐</span>
+          </button>
         </nav>
       </header>
 
@@ -152,5 +168,20 @@ const here = Astro.url.pathname;
         {nav.map((item) => <a href={item.href}>{item.label}</a>)}
       </footer>
     </div>
+
+    <script>
+      const toggle = document.querySelector<HTMLButtonElement>('.theme-toggle');
+      toggle?.addEventListener('click', () => {
+        const root = document.documentElement;
+        const current =
+          root.dataset.theme ||
+          (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem('theme', next);
+        } catch (e) {}
+      });
+    </script>
   </body>
 </html>

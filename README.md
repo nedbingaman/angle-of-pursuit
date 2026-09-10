@@ -67,7 +67,8 @@ Frontmatter fields, all validated at build time by `src/content.config.ts`:
 | `tags` | no | Free-form list; each tag gets a page at `/tags/<tag>/` |
 | `slug` | no | Pins the URL so the file can be renamed safely |
 | `editedNote` | no | Prints an "Edited: …" line at the foot of the post |
-| `draft` | no | `true` hides it from the built site |
+| `updated` | no | Date of that edit; shown by the note and used for `dateModified` |
+| `draft` | no | `true` hides it from every listing, feed, and the sitemap |
 
 Dates are calendar days with no time component and are formatted in UTC, so
 the printed date does not depend on the timezone of the machine that built the
@@ -108,7 +109,16 @@ also render unconditionally under `npm run dev`.
 
 `BaseLayout` accepts a `jsonLd` prop and emits it as
 `<script type="application/ld+json">`. The homepage passes a `WebSite` object;
-post pages pass `BlogPosting` (headline, `datePublished`, author, image).
+post pages pass a `@graph` of `BlogPosting` (headline, published/modified
+dates, word count, tags as keywords, author, image) and a `BreadcrumbList`;
+standalone pages pass `WebPage`.
+
+## Theme
+
+Light/dark follows the OS by default. The `◐` button in the nav overrides it
+and stores the choice in `localStorage`; an inline `<head>` script applies it
+before first paint. `public/_headers` pins a `sha256` of that inline script in
+the CSP — if its text changes, regenerate the hash.
 
 ## Comments
 
@@ -180,9 +190,13 @@ goes.
 
 `npx wrangler deploy` also works from a local checkout once `npm run build`
 has produced `dist/`. `npm run cf:dev` builds and runs the whole thing
-(Worker + assets + local D1) at `localhost:8787`. Security and cache headers
-are served from `public/_headers`; unmatched routes render `dist/404.html`
-(`not_found_handling` in `wrangler.jsonc`).
+(Worker + assets + local D1) at `localhost:8787`.
+
+`public/_headers` carries the security headers — HSTS, a Content-Security-Policy
+(same-origin plus Turnstile and the analytics beacon), `X-Frame-Options`,
+`Referrer-Policy` — and cache rules (`immutable` only for the hashed
+`/_astro/*`). Unmatched routes render `dist/404.html` (`not_found_handling` in
+`wrangler.jsonc`).
 
 ## Before deploying
 
